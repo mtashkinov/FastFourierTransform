@@ -1,89 +1,101 @@
 /**
- * Created by Mikhail on 22.02.2016.
+ * Created by Mikhail on 26.02.2016.
  */
-
-class FFT
+class FFT(internal var n : Int)
 {
-    fun fft(input : DoubleArray) : DoubleArray
+    internal var m : Int = 0
+
+    internal var cos : DoubleArray
+    internal var sin : DoubleArray
+
+    init
     {
-        val n = 2 * input.size
-        var tmvl = DoubleArray(n)
-        var output = DoubleArray(input.size)
+        this.m = (Math.log(n.toDouble()) / Math.log(2.0)).toInt()
 
-        for (i in 0..n-1 step 2)
+        cos = DoubleArray(n / 2)
+        sin = DoubleArray(n / 2)
+
+        for (i in 0..n / 2 - 1)
         {
-            tmvl[i] = 0.0
-            tmvl[i + 1] = input[i / 2]
+            cos[i] = Math.cos(-2.0 * Math.PI * i.toDouble() / n)
+            sin[i] = Math.sin(-2.0 * Math.PI * i.toDouble() / n)
         }
 
-        var i = 1
-        var j = 1
-        while (i < n)
+    }
+
+    fun fft(data: DoubleArray) : DoubleArray
+    {
+        var re = data.clone()
+        var im = DoubleArray(data.size)
+
+        var i: Int
+        var j: Int
+        var k: Int
+        var n1: Int
+        var n2: Int
+        var a: Int
+        var c: Double
+        var s: Double
+        var t1: Double
+        var t2: Double
+
+        j = 0
+        n2 = n / 2
+        i = 1
+        while (i < n - 1)
         {
-            if (j > i)
+            n1 = n2
+            while (j >= n1)
             {
-                var tmp = tmvl[i]
-                tmvl[i] = tmvl[j]
-                tmvl[j] = tmp
-
-                tmp = tmvl[i + 1]
-                tmvl[i + 1] = tmvl[j + 1]
-                tmvl[j + 1] = tmp
+                j = j - n1
+                n1 = n1 / 2
             }
-            i += 2
-            var m = input.size
-            while ((m >= 2) && (j > m))
+            j = j + n1
+
+            if (i < j)
             {
-                j -= m
-                m = m shr 1
+                t1 = re[i]
+                re[i] = re[j]
+                re[j] = t1
+                t1 = im[i]
+                im[i] = im[j]
+                im[j] = t1
             }
-            j += m
+            i++
+        }
 
-            var mMax = 2
-            while (n > mMax)
+        n2 = 1
+
+        i = 0
+        while (i < m)
+        {
+            n1 = n2
+            n2 = n2 + n2
+            a = 0
+
+            j = 0
+            while (j < n1)
             {
-                val theta = -Math.PI * 2 / mMax
-                val wPi = Math.sin(theta)
-                val wTmp = Math.sin(theta / 2)
-                val wpr = wTmp * wTmp * 2
-                val istp = mMax * 2
-                var wr = 1.0
-                var wi = 0.0
-                m = 1
+                c = cos[a]
+                s = sin[a]
+                a += 1 shl m - i - 1
 
-                while (m < mMax)
+                k = j
+                while (k < n)
                 {
-                    i = m
-                    m += 2
-                    var tmpr = wr
-                    var tmpi = wi
-                    wr = wr - tmpr * wpr - tmpi * wPi
-                    wi = wi + tmpr * wPi - tmpi * wpr
-
-                    while (i < n)
-                    {
-                        j = i + mMax
-                        tmpr = wr * tmvl[j] - wi * tmvl[j - 1]
-                        tmpi = wi * tmvl[j] + wr * tmvl[j - 1]
-
-                        tmvl[j] = tmvl[i] - tmpr
-                        tmvl[j - 1] = tmvl[i - 1] - tmpi
-                        tmvl[i] = tmvl[i] + tmpr
-                        tmvl[i - 1] = tmvl[i - 1] + tmpi
-                        i += istp
-                    }
+                    t1 = c * re[k + n1] - s * im[k + n1]
+                    t2 = s * re[k + n1] + c * im[k + n1]
+                    re[k + n1] = re[k] - t1
+                    im[k + n1] = im[k] - t2
+                    re[k] = re[k] + t1
+                    im[k] = im[k] + t2
+                    k = k + n2
                 }
-
-                mMax = istp
+                j++
             }
-
-            for (l in input.indices)
-            {
-                j = l * 2
-                output[l] = 2 * Math.sqrt(Math.pow(tmvl[j], 2.0)) + Math.pow(tmvl[j + 1], 2.0) / input.size
-            }
+            i++
         }
 
-        return output
+        return DoubleArray(data.size, {i -> Math.sqrt(re[i] * re[i] + im[i] * im[i])})
     }
 }
