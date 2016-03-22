@@ -4,7 +4,7 @@ import java.util.*
 /**
  * Created by Mikhail on 26.02.2016.
  */
-class Data(val fileName : String, val size : Int)
+class Data(val file : File, val size : Int)
 {
     var times : MutableList<Long> = ArrayList()
         private set
@@ -16,11 +16,11 @@ class Data(val fileName : String, val size : Int)
 
     init
     {
-        val file = File(fileName)
         val scanner = Scanner(file)
         while (scanner.hasNextLine())
         {
-            val line = scanner.nextLine()
+            var line = scanner.nextLine()
+            line = line.replace(";", " ")
             val lineScanner = Scanner(line)
 
             times.add(lineScanner.nextLong())
@@ -30,6 +30,7 @@ class Data(val fileName : String, val size : Int)
                 times.removeAt(0)
                 data.removeAt(0)
             }
+            lineScanner.close()
         }
         scanner.close()
 
