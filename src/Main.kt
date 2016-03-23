@@ -4,7 +4,6 @@ import java.io.File
  * Created by Mikhail on 25.02.2016.
  */
 
-val size = 512
 val AREA = 10
 fun main(args : Array<String>)
 {
@@ -16,18 +15,18 @@ fun main(args : Array<String>)
 
     for (file in files)
     {
-        val input = Data(file, size)
-        val fft = FFT(size)
+        val input = Data(file)
+        val fft = FFT(input.size)
 
         val res = fft.fft(input.data.toDoubleArray())
 
-        val start = fromValueToIndex((60 / 30.0), size, input.freq)
-        val end = fromValueToIndex((60 / 220.0), size, input.freq)
+        val start = fromValueToIndex((60 / 30.0), input.size, input.freq)
+        val end = fromValueToIndex((60 / 220.0), input.size, input.freq)
         //val index = getMaxIndex(res, start, end)
         val output = File(outputDir, "sp-" + file.name)
         output.createNewFile()
 
-        printFFT(output, res, size, input.freq)
+        printFFT(output, res, input.size, input.freq)
     }
 }
 

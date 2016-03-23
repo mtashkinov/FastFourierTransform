@@ -4,7 +4,7 @@ import java.util.*
 /**
  * Created by Mikhail on 26.02.2016.
  */
-class Data(val file : File, val size : Int)
+class Data(val file : File)
 {
     var times : MutableList<Long> = ArrayList()
         private set
@@ -12,15 +12,18 @@ class Data(val file : File, val size : Int)
         private set
     var freq : Double = 0.0
         private set
+    var size = 0
+        private set
 
 
     init
     {
-        val scanner = Scanner(file)
-        while (scanner.hasNextLine())
+        val lines = file.readLines()
+        size = findClosest2Power(lines.size)
+
+        for (x in lines)
         {
-            var line = scanner.nextLine()
-            line = line.replace(";", " ")
+            val line = x.replace(";", " ")
             val lineScanner = Scanner(line)
 
             times.add(lineScanner.nextLong())
@@ -32,7 +35,6 @@ class Data(val file : File, val size : Int)
             }
             lineScanner.close()
         }
-        scanner.close()
 
         countFreq()
     }
@@ -41,6 +43,20 @@ class Data(val file : File, val size : Int)
     {
         freq = 1000 / ((times[size - 1] - times[0]).toDouble() / size)
     }
+}
 
-
+private fun findClosest2Power(n : Int) : Int
+{
+    var pow = 1
+    while (pow < n)
+    {
+        pow *= 2
+    }
+    if (pow - n > n - pow / 2)
+    {
+        return pow / 2
+    } else
+    {
+        return pow
+    }
 }
