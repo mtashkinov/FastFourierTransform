@@ -1,24 +1,24 @@
 /**
  * Created by Mikhail on 26.02.2016.
  */
-class FFT(internal var n : Int)
+class FFT(private var size: Int)
 {
-    internal var m : Int = 0
+    private var m : Int = 0
 
-    internal var cos : DoubleArray
-    internal var sin : DoubleArray
+    private var cos : DoubleArray
+    private var sin : DoubleArray
 
     init
     {
-        this.m = (Math.log(n.toDouble()) / Math.log(2.0)).toInt()
+        this.m = (Math.log(size.toDouble()) / Math.log(2.0)).toInt()
 
-        cos = DoubleArray(n / 2)
-        sin = DoubleArray(n / 2)
+        cos = DoubleArray(size / 2)
+        sin = DoubleArray(size / 2)
 
-        for (i in 0..n / 2 - 1)
+        for (i in 0..size / 2 - 1)
         {
-            cos[i] = Math.cos(-2.0 * Math.PI * i.toDouble() / n)
-            sin[i] = Math.sin(-2.0 * Math.PI * i.toDouble() / n)
+            cos[i] = Math.cos(-2.0 * Math.PI * i.toDouble() / size)
+            sin[i] = Math.sin(-2.0 * Math.PI * i.toDouble() / size)
         }
 
     }
@@ -40,9 +40,9 @@ class FFT(internal var n : Int)
         var t2: Double
 
         j = 0
-        n2 = n / 2
+        n2 = size / 2
         i = 1
-        while (i < n - 1)
+        while (i < size - 1)
         {
             n1 = n2
             while (j >= n1)
@@ -81,7 +81,7 @@ class FFT(internal var n : Int)
                 a += 1 shl m - i - 1
 
                 k = j
-                while (k < n)
+                while (k < size)
                 {
                     t1 = c * re[k + n1] - s * im[k + n1]
                     t2 = s * re[k + n1] + c * im[k + n1]
@@ -97,5 +97,34 @@ class FFT(internal var n : Int)
         }
 
         return DoubleArray(data.size, {i -> Math.sqrt(re[i] * re[i] + im[i] * im[i])})
+    }
+
+    companion object
+    {
+        fun fromValueToIndex(value: Double, size: Int, freq: Double): Int
+        {
+            val index = size / (value * freq)
+            return index.toInt()
+        }
+
+        fun fromIndexToValue(index: Int, size: Int, freq: Double): Double
+        {
+            return index * freq / size
+        }
+
+        fun getMaxIndex(array: DoubleArray, start: Int, end: Int): Int
+        {
+            var max = array[start]
+            var index = start
+            for (i in start + 1..end)
+            {
+                if (array[i] > max)
+                {
+                    max = array[i]
+                    index = i
+                }
+            }
+            return index
+        }
     }
 }

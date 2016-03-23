@@ -4,7 +4,7 @@ import java.util.*
 /**
  * Created by Mikhail on 26.02.2016.
  */
-class Data(val file : File)
+class HeartRateData(val file : File)
 {
     var times : MutableList<Long> = ArrayList()
         private set
