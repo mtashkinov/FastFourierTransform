@@ -3,14 +3,17 @@
  */
 class PulseDetector(private val data: HeartRateData)
 {
+    private val AREA = 3
     val MIN_HEART_RATE = 40.0
     val MAX_HEART_RATE = 220.0
+    private val USUAL_HEART_RATE = 80.0
 
     lateinit var fft : DoubleArray
     private set
     var pulse = 0
     private set
     var isBadData = false
+    lateinit var interpolatedData : DoubleArray
 
     private var firstIndex = 0
     private var lastIndex = 0
@@ -18,11 +21,13 @@ class PulseDetector(private val data: HeartRateData)
     init
     {
         val fftDetector = FFT(data.size)
-        firstIndex = FFT.fromValueToIndex(60 / MIN_HEART_RATE, data.size, data.freq)
-        lastIndex = FFT.fromValueToIndex(60 / MAX_HEART_RATE, data.size, data.freq)
+        firstIndex = FFT.fromValueToIndex(MIN_HEART_RATE / 60, data.size, data.freq)
+        lastIndex = FFT.fromValueToIndex(MAX_HEART_RATE / 60, data.size, data.freq)
         synchronized(data.data)
         {
-            fft = fftDetector.fft(data.data.toDoubleArray())
+            data.countInterpolatedData()
+            interpolatedData = data.interpData
+            fft = fftDetector.fft(interpolatedData)
             val index = findMaxPike()
             pulse = (FFT.fromIndexToValue(index, data.size, data.freq) * 60).toInt()
         }
@@ -30,41 +35,50 @@ class PulseDetector(private val data: HeartRateData)
 
     private fun findMaxPike() : Int
     {
-        var index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
-        var oldMax = fft[index]
-        if (isBorder(index) && !isMax(index))
+        val index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
+        val oldMax = fft[index]
+        var result = checkBorderPike(fft, index)
+
+        // Check for bad data
+        if (fft[result].toDouble() / oldMax < 0.75)
         {
-            oldMax = fft[index]
-            var fftClearedBorder = clearBorder(index)
-            index = FFT.getMaxIndex(fftClearedBorder, firstIndex, lastIndex)
-            if (isBorder(index) && !isMax(index))
+            isBadData = true
+        } else
+        {
+            val clearedPike = clearPike(fft, result)
+            var sndResult = FFT.getMaxIndex(clearedPike, firstIndex, lastIndex)
+            checkBorderPike(clearedPike, sndResult)
+            val usualHRIndex = FFT.fromValueToIndex(USUAL_HEART_RATE / 60, data.size, data.freq)
+            if ((fft[sndResult] / fft[result] > 0.75) && (Math.abs(sndResult - usualHRIndex) < Math.abs(result - usualHRIndex)))
             {
-                fftClearedBorder = clearBorder(index)
-                index = FFT.getMaxIndex(fftClearedBorder, firstIndex, lastIndex)
+                result = sndResult
             }
         }
 
-        if (fft[index].toDouble() / oldMax < 0.75)
+        return result
+    }
+
+    private fun checkBorderPike(data : DoubleArray, startPos : Int) : Int
+    {
+        var index = startPos
+        while (isBorder(index) && !isMax(index))
         {
-            isBadData = true
+            var fftClearedPike = clearPike(data, index)
+            index = FFT.getMaxIndex(fftClearedPike, firstIndex, lastIndex)
         }
+
         return index
     }
 
-    private fun clearBorder(index: Int) : DoubleArray
+    private fun clearPike(data: DoubleArray, index: Int) : DoubleArray
     {
-        val borderEnd = findBorderPikeEnd(index)
+        val pikeEnds = findPikeEnds(index)
 
         var indices : List<Int>
-        if (index < borderEnd)
-        {
-            indices = fft.indices.filter { i -> i >= index && i <= borderEnd }
-        } else
-        {
-            indices = fft.indices.filter { i -> i <= index && i >= borderEnd }
-        }
 
-        val clearedFFT = fft.clone()
+        indices = data.indices.filter { i -> i >= pikeEnds[0] && i <= pikeEnds[1] }
+
+        val clearedFFT = data.clone()
         for (i in indices)
         {
             clearedFFT[i] = 0.0
@@ -73,29 +87,27 @@ class PulseDetector(private val data: HeartRateData)
         return clearedFFT
     }
 
-    private fun findBorderPikeEnd(curPos : Int) : Int
+    private fun findPikeEnds(curPos : Int) : IntArray
     {
-        var index = curPos
-        if (index == firstIndex)
+        var start = curPos
+        var end = curPos
+        while (end < fft.size - 1 && (!isMin(end) && !isMax(end)))
         {
-            while (index < fft.size - 1 && !isMin(index))
-            {
-                ++index
-            }
-        } else if (index == lastIndex)
-        {
-            while (index > 0 && !isMin(index))
-            {
-                --index
-            }
+            ++end
         }
 
-        return index
+        while (start > 0 && !isMin(start))
+        {
+            --start
+        }
+
+
+        return intArrayOf(start, end)
     }
 
     private fun isBorder(index: Int) : Boolean
     {
-        return (index == firstIndex) ||  (index == lastIndex)
+        return (index <= firstIndex + AREA) ||  (index >= lastIndex - AREA)
     }
 
     private fun isMax(index : Int) : Boolean

@@ -103,7 +103,7 @@ class FFT(private var size: Int)
     {
         fun fromValueToIndex(value: Double, size: Int, freq: Double): Int
         {
-            val index = size / (value * freq)
+            val index = value * size / freq
             return index.toInt()
         }
 

@@ -1,3 +1,5 @@
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction
 import java.io.File
 import java.util.*
 
@@ -9,6 +11,10 @@ class HeartRateData(val file : File)
     var times : MutableList<Long> = ArrayList()
         private set
     var data : MutableList<Double> = ArrayList()
+        private set
+    lateinit var interpTimes : DoubleArray
+        private set
+    lateinit var interpData : DoubleArray
         private set
     var freq : Double = 0.0
         private set
@@ -39,9 +45,44 @@ class HeartRateData(val file : File)
         countFreq()
     }
 
+    fun countInterpolatedData()
+    {
+        convert()
+    }
+
     private fun countFreq()
     {
         freq = 1000 / ((times[size - 1] - times[0]).toDouble() / size)
+    }
+
+    fun split(partSize : Int) : List<DoubleArray>
+    {
+        var list = ArrayList<DoubleArray>()
+        val shift = partSize
+        synchronized(data)
+        {
+            var end = data.size
+            while (end >= partSize)
+            {
+                list.add(DoubleArray(partSize, { i -> data[end - partSize + i] }))
+                end -= shift
+            }
+        }
+
+        return list
+    }
+
+    private fun convert()
+    {
+        val funct = interpolate()
+        interpTimes = DoubleArray(size, { i -> times[0] + i * 1000 / freq })
+        interpData = DoubleArray(size, { i -> funct.value(times[0] + i * 1000 / freq) })
+    }
+
+    private fun interpolate() : PolynomialSplineFunction
+    {
+        val interpolator = SplineInterpolator()
+        return interpolator.interpolate(times.map { x -> x.toDouble() }.toDoubleArray(), data.toDoubleArray())
     }
 }
 
