@@ -10,6 +10,8 @@ fun main(args : Array<String>)
     val files = inputDir.listFiles()
     val outputDir = File("Output")
     val interpDir = File("Interpolated")
+    val resultFile = File("result.csv")
+    resultFile.createNewFile()
     outputDir.mkdir()
     clearDir(outputDir)
     interpDir.mkdir()
@@ -19,25 +21,33 @@ fun main(args : Array<String>)
     {
         val input = HeartRateData(file)
 
-        /*print(file.name + " ")
+        // If data completed
+        if (input.freq != 0.0)
+        {
+            /*print(file.name + " ")
         test(input).forEach { x -> print(x.toString()+ " ") }
         println()*/
-        val pulseDetector = PulseDetector(input)
-        val output = File(outputDir, "sp-" + file.name)
-        val interpolatedOutput = File(interpDir, "d" + file.name)
-        interpolatedOutput.createNewFile()
-        output.createNewFile()
+            val pulseDetector = PulseDetector(input)
+            val output = File(outputDir, "sp-" + file.name)
+            val interpolatedOutput = File(interpDir, "d" + file.name)
+            interpolatedOutput.createNewFile()
+            output.createNewFile()
 
-        if (!pulseDetector.isBadData)
-        {
-            println("${file.name} ${pulseDetector.pulse}")
-        } else
-        {
-            println("${file.name} Bad data")
+            var result = ""
+            if (!pulseDetector.isBadData)
+            {
+                result = "${file.name} ${pulseDetector.pulse}"
+            }
+            else
+            {
+                result = "${file.name} Bad data"
+            }
+            println(result)
+            resultFile.appendText(result + "\n")
+
+            printFFT(output, pulseDetector.fft, input.size, input.freq)
+            printData(interpolatedOutput, input)
         }
-
-        printFFT(output, pulseDetector.fft, input.size, input.freq)
-        printData(interpolatedOutput, input)
     }
 }
 

@@ -24,8 +24,13 @@ class HeartRateData(val file : File)
 
     init
     {
-        val lines = file.readLines()
+        var lines = file.readLines()
         size = findClosest2Power(lines.size)
+
+        if (lines[1].equals("true") || lines[1].equals("false"))
+        {
+            lines = lines.drop(3)
+        }
 
         for (x in lines)
         {
@@ -42,7 +47,10 @@ class HeartRateData(val file : File)
             lineScanner.close()
         }
 
-        countFreq()
+        if (times.size == size)
+        {
+            countFreq()
+        }
     }
 
     fun countInterpolatedData()
