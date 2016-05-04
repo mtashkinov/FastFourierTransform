@@ -24,9 +24,6 @@ fun main(args : Array<String>)
         // If data completed
         if (input.freq != 0.0)
         {
-            /*print(file.name + " ")
-        test(input).forEach { x -> print(x.toString()+ " ") }
-        println()*/
             val pulseDetector = PulseDetector(input)
             val output = File(outputDir, "sp-" + file.name)
             val interpolatedOutput = File(interpDir, "d" + file.name)

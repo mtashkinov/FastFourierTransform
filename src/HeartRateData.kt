@@ -55,7 +55,7 @@ class HeartRateData(val file : File)
 
     fun countInterpolatedData()
     {
-        convert()
+        convertLineInterp()
     }
 
     private fun countFreq()
@@ -84,7 +84,29 @@ class HeartRateData(val file : File)
     {
         val funct = interpolate()
         interpTimes = DoubleArray(size, { i -> times[0] + i * 1000 / freq })
-        interpData = DoubleArray(size, { i -> funct.value(times[0] + i * 1000 / freq) })
+        interpData = DoubleArray(size, { i -> funct.value(interpTimes[i]) })
+    }
+
+    private fun convertLineInterp()
+    {
+        interpTimes = DoubleArray(size, { i -> times[0] + i * 1000 / freq })
+        interpData = DoubleArray(size, { i -> lineInterpolate(interpTimes[i]) })
+    }
+
+    private fun lineInterpolate(time : Double) : Double
+    {
+        var i = 0
+        while (times[i] < time)
+        {
+            ++i
+        }
+        if (times[i] == time.toLong())
+        {
+            return data[i]
+        } else
+        {
+            return data[i] + (data[i] - data[i-1]) * (time - times[i-1]) / (times[i] - times[i-1])
+        }
     }
 
     private fun interpolate() : PolynomialSplineFunction

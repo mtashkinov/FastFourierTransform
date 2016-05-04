@@ -61,9 +61,10 @@ class PulseDetector(private val data: HeartRateData)
     private fun checkBorderPike(data : DoubleArray, startPos : Int) : Int
     {
         var index = startPos
+        var fftClearedPike = data.clone()
         while (isBorder(index) && !isMax(index))
         {
-            var fftClearedPike = clearPike(data, index)
+            fftClearedPike = clearPike(fftClearedPike, index)
             index = FFT.getMaxIndex(fftClearedPike, firstIndex, lastIndex)
         }
 
