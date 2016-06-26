@@ -1,131 +1,170 @@
+import java.util.*
+
 /**
  * Created by Mikhail on 23.03.2016.
  */
-class PulseDetector(private val data: HeartRateData)
+class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double>, val size : Int, val pikes : MutableList<MutableList<Int>>, val partSize : Int, val totalFreq : Double)
 {
-    private val AREA = 3
-    val MIN_HEART_RATE = 40.0
-    val MAX_HEART_RATE = 220.0
-    private val USUAL_HEART_RATE = 80.0
+    companion object
+    {
+        val MIN_HEART_RATE = 40.0
+        val MAX_HEART_RATE = 220.0
+    }
+    private val JOIN_PIKE_AREA = 5
+    private val ACCEPT_COEF = 0.4
 
-    lateinit var fft : DoubleArray
-    private set
+    private var discretization = 0.0
     var pulse = 0
     private set
+    var jointPikes = ArrayList<Double>()
+    var votes = ArrayList<Int>()
+    var filteredPikes : MutableList<Double> = ArrayList()
     var isBadData = false
-    lateinit var interpolatedData : DoubleArray
-
-    private var firstIndex = 0
-    private var lastIndex = 0
 
     init
     {
-        val fftDetector = FFT(data.size)
-        firstIndex = FFT.fromValueToIndex(MIN_HEART_RATE / 60, data.size, data.freq)
-        lastIndex = FFT.fromValueToIndex(MAX_HEART_RATE / 60, data.size, data.freq)
-        synchronized(data.data)
-        {
-            data.countInterpolatedData()
-            interpolatedData = data.interpData
-            fft = fftDetector.fft(interpolatedData)
-            val index = findMaxPike()
-            pulse = (FFT.fromIndexToValue(index, data.size, data.freq) * 60).toInt()
-        }
-    }
+        getDiscretization()
+        countPikeEntries()
+        filterByVotes(1.0)
+        addDoubledVotes(findDoubledPikes())
+        filterByVotes(pikes.size * ACCEPT_COEF)
+        filterByMaxDoubledVotes()
+        //filterDoubledPulsePikes()
 
-    private fun findMaxPike() : Int
-    {
-        val index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
-        val oldMax = fft[index]
-        var result = checkBorderPike(fft, index)
-
-        // Check for bad data
-        if (fft[result].toDouble() / oldMax < 0.75)
+        if (filteredPikes.size == 0)
         {
             isBadData = true
         } else
         {
-            val clearedPike = clearPike(fft, result)
-            var sndResult = FFT.getMaxIndex(clearedPike, firstIndex, lastIndex)
-            checkBorderPike(clearedPike, sndResult)
-            val usualHRIndex = FFT.fromValueToIndex(USUAL_HEART_RATE / 60, data.size, data.freq)
-            if ((fft[sndResult] / fft[result] > 0.75) && (Math.abs(sndResult - usualHRIndex) < Math.abs(result - usualHRIndex)))
-            {
-                result = sndResult
-            }
+            findPulse()
         }
-
-        return result
     }
 
-    private fun checkBorderPike(data : DoubleArray, startPos : Int) : Int
+    fun countPikeEntries()
     {
-        var index = startPos
-        var fftClearedPike = data.clone()
-        while (isBorder(index) && !isMax(index))
+        for (partNum in pikes.indices)
         {
-            fftClearedPike = clearPike(fftClearedPike, index)
+            for (pike in pikes[partNum])
+            {
+                val pikePulse = FFT.fromIndexToValue(pike, partSize, freq[partNum]) * 60
+                val existedPikeIndex = jointPikes.indices.find { x -> Math.abs(pikePulse - jointPikes[x]) <= discretization }
+                if (existedPikeIndex == null)
+                {
+                    jointPikes.add(pikePulse)
+                    votes.add(1)
+                }
+                else
+                {
+                    ++votes[existedPikeIndex]
+                }
+            }
+        }
+    }
+
+    fun findPulse()
+    {
+        val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, totalFreq)
+        val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, totalFreq)
+        var index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
+        var fftClearedPike = fft.clone()
+        while ((fftClearedPike[index] != 0.0) && (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
+        {
+            fftClearedPike = PikeDetector.clearPike(fftClearedPike, index)
             index = FFT.getMaxIndex(fftClearedPike, firstIndex, lastIndex)
         }
 
-        return index
-    }
-
-    private fun clearPike(data: DoubleArray, index: Int) : DoubleArray
-    {
-        val pikeEnds = findPikeEnds(index)
-
-        var indices : List<Int>
-
-        indices = data.indices.filter { i -> i >= pikeEnds[0] && i <= pikeEnds[1] }
-
-        val clearedFFT = data.clone()
-        for (i in indices)
+        if (fftClearedPike[index] == 0.0)
         {
-            clearedFFT[i] = 0.0
+            isBadData = true
         }
 
-        return clearedFFT
+        pulse = Math.round(FFT.fromIndexToValue(index, size, totalFreq) * 60).toInt()
     }
 
-    private fun findPikeEnds(curPos : Int) : IntArray
+    fun isPikeCloseToIndex(index : Int, pike : Double) : Boolean
     {
-        var start = curPos
-        var end = curPos
-        while (end < fft.size - 1 && (!isMin(end) && !isMax(end)))
+        return Math.abs(FFT.fromIndexToValue(index, size, totalFreq) * 60 - pike) < discretization + 0.1
+
+    }
+
+    fun filterDoubledPulsePikes()
+    {
+        val resultPikes = ArrayList<Double>()
+        for (pike in jointPikes)
         {
-            ++end
+            if (filteredPikes.find { x -> Math.abs(pike / 2 - x) < discretization * 2 } == null)
+            {
+                resultPikes.add(pike)
+            }
         }
 
-        while (start > 0 && !isMin(start))
+        filteredPikes = resultPikes
+    }
+
+    fun findDoubledPikes() : ArrayList<Double>
+    {
+        val doubledPikes = ArrayList<Double>()
+        for (pike in jointPikes)
         {
-            --start
+            if ((pike > 100) && (filteredPikes.find { x -> Math.abs(pike / 2 - x) < discretization * 2 } != null))
+            {
+                doubledPikes.add(pike)
+            }
         }
 
-
-        return intArrayOf(start, end)
+        return doubledPikes
     }
 
-    private fun isBorder(index: Int) : Boolean
+    fun filterByVotes(threshold : Double)
     {
-        return (index <= firstIndex + AREA) ||  (index >= lastIndex - AREA)
+        val resultPikes = ArrayList<Double>()
+        val filteredIndices = votes.indices.filter { index -> (votes[index] > threshold)}
+        filteredIndices.forEach { x -> resultPikes.add(jointPikes[x]) }
+
+        filteredPikes = resultPikes
     }
 
-    private fun isMax(index : Int) : Boolean
+    fun addDoubledVotes(doubledPikes : ArrayList<Double>)
     {
-        var start = 0
-        if (index - AREA > 0) start = index - AREA
-        var end = fft.size - 1
-        if (index + AREA < fft.size - 1) end = index + AREA
-        return fft.slice(start..end).max() == fft[index]
+        for (doublePike in doubledPikes)
+        {
+            val votesForDoubled = votes[jointPikes.indexOf(doublePike)]
+            val foundPikes = filteredPikes.filter { x -> Math.abs(doublePike / 2 - x) < discretization * 2 }
+            for (pike in foundPikes)
+            {
+                val index = jointPikes.indexOf(pike)
+                votes[index] += votesForDoubled
+            }
+        }
     }
 
-    private fun isMin(index : Int) : Boolean
+    fun filterByMaxDoubledVotes()
     {
-        var start = 0
-        if (index - AREA > 0) start = index - AREA
-        var end = fft.size - 1
-        if (index + AREA < fft.size - 1) end = index + AREA
-        return fft.slice(start..end).min() == fft[index]
+        val resultPikes = ArrayList<Double>()
+        val doubledPikes = findDoubledPikes()
+        val doubledVotes = IntArray(filteredPikes.size)
+
+        for (doublePike in doubledPikes)
+        {
+            val votesForDoubled = votes[jointPikes.indexOf(doublePike)]
+            val foundPikes = filteredPikes.filter { x -> Math.abs(doublePike / 2 - x) < discretization * 2 }
+            for (pike in foundPikes)
+            {
+                val index = filteredPikes.indexOf(pike)
+                doubledVotes[index] += votesForDoubled
+            }
+        }
+
+        val max = doubledVotes.max()
+        val filteredIndices = doubledVotes.indices.filter { index -> (doubledVotes[index] == max)}
+        filteredIndices.forEach { x -> resultPikes.add(filteredPikes[x]) }
+
+        filteredPikes = resultPikes
+    }
+
+    fun getDiscretization()
+    {
+        discretization = (freq.map { x -> FFT.fromIndexToValue(1, partSize, x) * 60 / 2 }).max()!! +
+                         FFT.fromIndexToValue(1, size, totalFreq) * 60 / 2
     }
 }
