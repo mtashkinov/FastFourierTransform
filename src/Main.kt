@@ -59,8 +59,8 @@ fun clearDir(dir : File)
 
 fun printPartsFFT(file: File, data : HeartRateData)
 {
-    var size = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.partSize, data.freq[0]) -
-               FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.partSize, data.freq[0]) + 1
+    var size = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.partSize, data.freq) -
+               FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.partSize, data.freq) + 1
     val lines = ArrayList<String>(size)
     for (i in 0..size-1)
     {
@@ -69,8 +69,8 @@ fun printPartsFFT(file: File, data : HeartRateData)
 
     for (i in data.partsFFT.indices)
     {
-        val start = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.partSize, data.freq[i])
-        val end = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.partSize, data.freq[i])
+        val start = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.partSize, data.freq)
+        val end = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.partSize, data.freq)
         if (end - start + 1 > size)
         {
             var str = ""
@@ -86,7 +86,7 @@ fun printPartsFFT(file: File, data : HeartRateData)
         }
         for (j in start..end)
         {
-            lines[j - start] += "${FFT.fromIndexToValue(j, data.partSize, data.freq[i]) * 60};${data.partsFFT[i][j]};"
+            lines[j - start] += "${FFT.fromIndexToValue(j, data.partSize, data.freq) * 60};${data.partsFFT[i][j]};"
         }
         for (j in end-start+1..size - 1)
         {

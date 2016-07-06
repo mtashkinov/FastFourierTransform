@@ -16,12 +16,11 @@ class HeartRateData(val file : File)
     var partSize = 0
     var isBadData = true
     var pulse = 0
-    var freq : MutableList<Double> = ArrayList()
     var filteredData = DoubleArray(0)
     var pureData = DoubleArray(0)
     var freqData = DoubleArray(0)
     var totalFFT : DoubleArray = DoubleArray(0)
-    var totalFreq = 0.0
+    var freq = 0.0
     private val parts = ArrayList<IntRange>()
     val partsFFT = ArrayList<DoubleArray>()
     var interpTimes = DoubleArray(0)
@@ -63,18 +62,18 @@ class HeartRateData(val file : File)
             }
 
             val fftCounter = FFT(maxSize)
-            totalFreq = countFreq(0..data.lastIndex)
+            freq = countFreq(0..data.lastIndex)
 
 
-            pureData = countInterpolatedData(0..data.lastIndex, totalFreq)
-            freqData = Filter().apply1(pureData, totalFreq)
+            pureData = countInterpolatedData(0..data.lastIndex, freq)
+            freqData = Filter().apply1(pureData, freq)
 
 
-            filteredData = Filter().apply(countInterpolatedData(0..data.lastIndex, totalFreq), totalFreq)
+            filteredData = Filter().apply(countInterpolatedData(0..data.lastIndex, freq), freq)
             totalFFT = fftCounter.fft(filteredData)
 
             countPikes()
-            val pulseDetector = PulseDetector(totalFFT, freq, maxSize, pikes, partSize, totalFreq)
+            val pulseDetector = PulseDetector(totalFFT, maxSize, pikes, partSize, freq)
             isBadData = pulseDetector.isBadData
             pulse = pulseDetector.pulse
         }
@@ -84,10 +83,9 @@ class HeartRateData(val file : File)
     {
         for (part in parts)
         {
-            freq.add(countFreq(part))
             val fftCounter = FFT(partSize)
             partsFFT.add(fftCounter.fft(filteredData.slice(part).toDoubleArray()))
-            val pikeDetector = PikeDetector(partsFFT.last(), freq.last(), partSize)
+            val pikeDetector = PikeDetector(partsFFT.last(), freq, partSize)
             pikes.add(pikeDetector.pikes)
         }
     }
@@ -99,7 +97,7 @@ class HeartRateData(val file : File)
 
     private fun countFreq(range : IntRange) : Double
     {
-        return 1000 / ((times[range.last] - times[range.first]).toDouble() / (range.last - range.first)) // +1 or not +1
+        return 1000 / ((times[range.last] - times[range.first]).toDouble() / (range.last - range.first))
     }
 
     private fun convertLineInterp(range : IntRange, freq : Double) : DoubleArray

@@ -3,14 +3,14 @@ import java.util.*
 /**
  * Created by Mikhail on 23.03.2016.
  */
-class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double>, val size : Int, val pikes : MutableList<MutableList<Int>>, val partSize : Int, val totalFreq : Double)
+class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : MutableList<MutableList<Int>>, val partSize : Int, val freq: Double)
 {
     companion object
     {
         val MIN_HEART_RATE = 40.0
         val MAX_HEART_RATE = 220.0
     }
-    private val JOIN_PIKE_AREA = 5
+
     private val ACCEPT_COEF = 0.4
 
     private var discretization = 0.0
@@ -46,7 +46,7 @@ class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double
         {
             for (pike in pikes[partNum])
             {
-                val pikePulse = FFT.fromIndexToValue(pike, partSize, freq[partNum]) * 60
+                val pikePulse = FFT.fromIndexToValue(pike, partSize, freq) * 60
                 val existedPikeIndex = jointPikes.indices.find { x -> Math.abs(pikePulse - jointPikes[x]) <= discretization }
                 if (existedPikeIndex == null)
                 {
@@ -63,8 +63,8 @@ class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double
 
     fun findPulse()
     {
-        val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, totalFreq)
-        val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, totalFreq)
+        val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, freq)
+        val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, freq)
         var index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
         var fftClearedPike = fft.clone()
         while ((fftClearedPike[index] != 0.0) && (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
@@ -78,27 +78,13 @@ class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double
             isBadData = true
         }
 
-        pulse = Math.round(FFT.fromIndexToValue(index, size, totalFreq) * 60).toInt()
+        pulse = Math.round(FFT.fromIndexToValue(index, size, freq) * 60).toInt()
     }
 
     fun isPikeCloseToIndex(index : Int, pike : Double) : Boolean
     {
-        return Math.abs(FFT.fromIndexToValue(index, size, totalFreq) * 60 - pike) < discretization + 0.1
+        return Math.abs(FFT.fromIndexToValue(index, size, freq) * 60 - pike) < discretization + 0.1
 
-    }
-
-    fun filterDoubledPulsePikes()
-    {
-        val resultPikes = ArrayList<Double>()
-        for (pike in jointPikes)
-        {
-            if (filteredPikes.find { x -> Math.abs(pike / 2 - x) < discretization * 2 } == null)
-            {
-                resultPikes.add(pike)
-            }
-        }
-
-        filteredPikes = resultPikes
     }
 
     fun findDoubledPikes() : ArrayList<Double>
@@ -164,7 +150,7 @@ class PulseDetector(private val fft : DoubleArray, val freq : MutableList<Double
 
     fun getDiscretization()
     {
-        discretization = (freq.map { x -> FFT.fromIndexToValue(1, partSize, x) * 60 / 2 }).max()!! +
-                         FFT.fromIndexToValue(1, size, totalFreq) * 60 / 2
+        discretization = (FFT.fromIndexToValue(1, partSize, freq) * 60 +
+                         FFT.fromIndexToValue(1, size, freq) * 60) / 2
     }
 }
