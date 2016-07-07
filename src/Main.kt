@@ -30,18 +30,23 @@ fun main(args : Array<String>)
     {
         val input = HeartRateData(file)
 
-        var result = ""
-        if (!input.isBadData)
+        var result = "${file.name};"
+        for (i in input.pulseHistory.indices)
         {
-            result = "${file.name};${input.pulse}"
-        }
-        else
-        {
-            result = "${file.name};-"
+            if (!input.isBadDataHistory[i])
+            {
+                result += "${input.pulseHistory[i]};"
+            }
+            else
+            {
+                result += "-;"
+            }
         }
         println(result.replace(';', ' '))
         resultFile.appendText(result + "\n")
 
+        /*val filteredDataFile = File(filtDir, "sp-" + file.name)
+        printFFT(filteredDataFile, input)*/
         /*val filteredDataFile = File(filtDir, file.name)
         printData(filteredDataFile, input)*/
         /*val spFile = File(filtDir, "sp-" + file.name)
@@ -57,7 +62,7 @@ fun clearDir(dir : File)
     files.forEach { file -> file.delete() }
 }
 
-fun printPartsFFT(file: File, data : HeartRateData)
+/*fun printPartsFFT(file: File, data : HeartRateData)
 {
     var size = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.partSize, data.freq) -
                FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.partSize, data.freq) + 1
@@ -98,34 +103,39 @@ fun printPartsFFT(file: File, data : HeartRateData)
     {
         file.appendText(line + "\n")
     }
-}
+}*/
 
-fun printFFT(file : File, fft : DoubleArray, size : Int, freq : Double)
+fun printFFT(file : File, data: HeartRateData)
 {
-    for (i in fft.indices)
+    val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.size, data.freq)
+    val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.size, data.freq)
+    for (i in firstIndex..lastIndex)
     {
-        file.appendText("${FFT.fromIndexToValue(i, size, freq) * 60};${fft[i]}\n")
+        file.appendText("${FFT.fromIndexToValue(i, data.size, data.freq) * 60};")
+        for (j in data.totalFFTHistory.indices)
+        {
+            file.appendText("${data.totalFFTHistory[j][i]};")
+        }
+        file.appendText("\n")
     }
 }
 
-fun printData(file : File, data : HeartRateData)
+/*fun printData(file : File, data : HeartRateData)
 {
     for (i in data.filteredData.indices)
     {
         file.appendText("${data.interpTimes[i]};${data.pureData[i]};${data.freqData[i]};${data.filteredData[i]}\n")
     }
-}
-
-/*fun test(data : HeartRateData) : List<Int>
-{
-    val size = data.size / 4
-    val list = data.split(size)
-    val firstIndex = FFT.fromValueToIndex(60 / 40.0, size, data.freq)
-    val lastIndex = FFT.fromValueToIndex(60 / 220.0, size, data.freq)
-
-    return list.map { x ->
-        val fft = FFT(size)
-        val res = fft.fft(x)
-        (FFT.fromIndexToValue(FFT.getMaxIndex(res, firstIndex, lastIndex), size, data.freq) * 60).toInt()
-    }
 }*/
+
+fun printFilteredData(file : File, data : HeartRateData)
+{
+    for (i in 0..data.size-1)
+    {
+        for (j in data.filteredDataHistory.indices)
+        {
+            file.appendText("${data.filteredDataHistory[j][i]};")
+        }
+        file.appendText("\n")
+    }
+}
