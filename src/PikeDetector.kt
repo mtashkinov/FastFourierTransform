@@ -12,8 +12,8 @@ class PikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
 
     init
     {
-        firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, freq)
-        lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, freq)
+        firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE.toDouble() / 60, size, freq)
+        lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE.toDouble() / 60, size, freq)
         findPikes()
     }
     private fun findPikes()
@@ -84,6 +84,15 @@ class PikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
                 --start
             }
 
+            if (start < 0)
+            {
+                start = 0
+            }
+
+            if (end >= data.size)
+            {
+                end = data.lastIndex
+            }
 
             return start..end
         }

@@ -32,6 +32,7 @@ class HeartRateData(file : File)
     val isBadDataHistory = ArrayList<Boolean>()
     val filteredDataHistory = ArrayList<DoubleArray>()
     val totalFFTHistory = ArrayList<DoubleArray>()
+    var interpData = ArrayList<Double>()
 
 
     init
@@ -41,6 +42,13 @@ class HeartRateData(file : File)
         if (lines[1].equals("true") || lines[1].equals("false"))
         {
             lines = lines.drop(3)
+        }
+
+        val pulseString = lines.find { x -> x.equals("Pulse history") }
+        if (pulseString != null)
+        {
+            val index = lines.indexOf(pulseString)
+            lines = lines.dropLast(lines.size - index)
         }
 
         for (i in lines.indices)
@@ -94,12 +102,11 @@ class HeartRateData(file : File)
 
     fun countPulse()
     {
-        firstMeasurement = false
         freq = countFreq()
-        filter = Filter(size, freq)
+        filter = Filter(size, freq, PulseDetector.MIN_HEART_RATE..PulseDetector.MAX_HEART_RATE)
         val fftCounter = FFT(size)
 
-        val interpData = countInterpolatedData(0..data.lastIndex, freq)
+        interpData = ArrayList<Double>(countInterpolatedData(0..data.lastIndex, freq).asList())
         for (value in interpData)
         {
             filter!!.addData(value)
@@ -112,9 +119,14 @@ class HeartRateData(file : File)
         val pulseDetector = PulseDetector(totalFFT, size, pikes, partSize, freq)
         isBadData = pulseDetector.isBadData
         pulse = pulseDetector.pulse
+        if (!isBadData)
+        {
+            getRRPikesPulse()
+        }
         isBadDataHistory.add(isBadData)
         pulseHistory.add(pulse)
         dropOldData()
+        firstMeasurement = false
     }
 
     private fun updatePulse()
@@ -132,9 +144,44 @@ class HeartRateData(file : File)
         val pulseDetector = PulseDetector(totalFFT, size, pikes, partSize, freq)
         isBadData = pulseDetector.isBadData
         pulse = pulseDetector.pulse
+        if (!isBadData)
+        {
+            getRRPikesPulse()
+        }
         isBadDataHistory.add(isBadData)
         pulseHistory.add(pulse)
         dropOldData()
+    }
+
+    private fun getRRPikesPulse()
+    {
+        val start = if (pulse - 25 > PulseDetector.MIN_HEART_RATE) pulse - 25 else PulseDetector.MIN_HEART_RATE
+        val end = if (pulse + 25 < PulseDetector.MAX_HEART_RATE) pulse + 25 else PulseDetector.MAX_HEART_RATE
+        val strongFilter = Filter(size, freq, start..end)
+
+        for (value in interpData)
+        {
+            strongFilter.addData(value)
+        }
+
+        val shiftedData = strongFilter.getShiftedData()
+        val pikesPulse = RRPikesCounter.countPikes(shiftedData) * 60 * 1000 / (interpStep * size)
+
+
+        if (firstMeasurement)
+        {
+            if (Math.abs(pikesPulse - pulse) > 10)
+            {
+                isBadData = true
+            } else
+            {
+                pulse = Math.round(pikesPulse).toInt()
+            }
+        }
+        else if (Math.abs(pikesPulse - pulseHistory.last()) < Math.abs(pulseHistory.last() - pulse))
+        {
+            pulse = Math.round(pikesPulse).toInt()
+        }
     }
 
     private fun dropOldData()
@@ -147,6 +194,7 @@ class HeartRateData(file : File)
         {
             times.removeAt(0)
             data.removeAt(0)
+            interpData.removeAt(0)
         }
     }
 
@@ -155,6 +203,7 @@ class HeartRateData(file : File)
         while (canInterpPoint())
         {
             val point = interpolatePoint(lastInterpIndex, lastInterpTime + interpStep)
+            interpData.add(point)
             filter!!.addData(point)
             lastInterpTime += interpStep
         }

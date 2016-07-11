@@ -107,8 +107,8 @@ fun clearDir(dir : File)
 
 fun printFFT(file : File, data: HeartRateData)
 {
-    val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, data.size, data.freq)
-    val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, data.size, data.freq)
+    val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE.toDouble() / 60, data.size, data.freq)
+    val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE.toDouble() / 60, data.size, data.freq)
     for (i in firstIndex..lastIndex)
     {
         file.appendText("${FFT.fromIndexToValue(i, data.size, data.freq) * 60};")

@@ -122,4 +122,51 @@ class AmplitudeEqualizer(private val size : Int, private val freq : Double)
             data.add(sourceData[index] * energyCoef)
         }
     }
+
+    private fun findShift(data : DoubleArray) : Double
+    {
+        val maxs = DoubleArray(3)
+        val mins = DoubleArray(3)
+
+        for (value in data)
+        {
+            when
+            {
+                value >= maxs[0] ->
+                {
+                    maxs[2] = maxs[1]
+                    maxs[1] = maxs[0]
+                    maxs[0] = value
+                }
+                value >= maxs[1] ->
+                {
+                    maxs[2] = maxs[1]
+                    maxs[1] = value
+                }
+                value > maxs[2] -> maxs[2] = value
+                value <= mins[0] ->
+                {
+                    mins[2] = mins[1]
+                    mins[1] = mins[0]
+                    mins[0] = value
+                }
+                value <= mins[1] ->
+                {
+                    mins[2] = mins[1]
+                    mins[1] = value
+                }
+                value < mins[2] -> mins[2] = value
+            }
+        }
+
+        return -(mins[2] + maxs[2]) / 2
+    }
+
+    fun getShiftedData() : DoubleArray
+    {
+        val data = getData()
+        val shift = findShift(data)
+
+        return DoubleArray(data.size, { i -> data[i] + shift })
+    }
 }

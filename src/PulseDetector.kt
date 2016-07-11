@@ -7,8 +7,8 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
 {
     companion object
     {
-        val MIN_HEART_RATE = 40.0
-        val MAX_HEART_RATE = 220.0
+        val MIN_HEART_RATE = 40
+        val MAX_HEART_RATE = 220
     }
 
     private val ACCEPT_COEF = 0.4
@@ -63,8 +63,8 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
 
     fun findPulse()
     {
-        val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, freq)
-        val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, freq)
+        val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE.toDouble() / 60, size, freq)
+        val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE.toDouble() / 60, size, freq)
         var index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
         var fftClearedPike = fft.clone()
         while ((fftClearedPike[index] != 0.0) && (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
