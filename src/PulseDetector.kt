@@ -3,12 +3,13 @@ import java.util.*
 /**
  * Created by Mikhail on 23.03.2016.
  */
-class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : MutableList<MutableList<Int>>, val partSize : Int, val freq: Double)
+class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : MutableList<MutableList<Int>>,
+                    val partSize : Int, val freq: Double, val prevPulse : Int)
 {
     companion object
     {
-        val MIN_HEART_RATE = 40
-        val MAX_HEART_RATE = 220
+        val MIN_HEART_RATE = 40.0
+        val MAX_HEART_RATE = 220.0
     }
 
     private val ACCEPT_COEF = 0.4
@@ -28,6 +29,11 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
         filterByVotes(1.0)
         addDoubledVotes(findDoubledPikes())
         filterByVotes(pikes.size * ACCEPT_COEF)
+        //getPulseExpectedInterval()
+        if (prevPulse != 0)
+        {
+            correctDoubledPikes()
+        }
         filterByMaxDoubledVotes()
         //filterDoubledPulsePikes()
 
@@ -84,7 +90,31 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
     fun isPikeCloseToIndex(index : Int, pike : Double) : Boolean
     {
         return Math.abs(FFT.fromIndexToValue(index, size, freq) * 60 - pike) < discretization + 0.1
+    }
 
+    fun correctDoubledPikes()
+    {
+        val doubledPikes = findDoubledPikes()
+        val doubledPikesInFiltered = filteredPikes.filter { x -> doubledPikes.contains(x) }
+        for (doublePike in doubledPikesInFiltered)
+        {
+            val foundPikes = filteredPikes.filter { x -> Math.abs(doublePike / 2 - x) < discretization * 2 }
+
+            val diff = Math.abs(doublePike - prevPulse)
+            val pikesToDrop = ArrayList<Double>()
+            for (pike in foundPikes)
+            {
+                if (Math.abs(pike - prevPulse) > diff)
+                {
+                    pikesToDrop.add(pike)
+                }
+            }
+
+            for (pike in pikesToDrop)
+            {
+                filteredPikes.remove(pike)
+            }
+        }
     }
 
     fun findDoubledPikes() : ArrayList<Double>
@@ -114,12 +144,17 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
     {
         for (doublePike in doubledPikes)
         {
-            val votesForDoubled = votes[jointPikes.indexOf(doublePike)]
+            val doubledPikeIndex = jointPikes.indexOf(doublePike)
+            val votesForDoubled = votes[doubledPikeIndex]
             val foundPikes = filteredPikes.filter { x -> Math.abs(doublePike / 2 - x) < discretization * 2 }
             for (pike in foundPikes)
             {
                 val index = jointPikes.indexOf(pike)
                 votes[index] += votesForDoubled
+                if (filteredPikes.contains(doublePike))
+                {
+                    votes[doubledPikeIndex] += votes[index]
+                }
             }
         }
     }
