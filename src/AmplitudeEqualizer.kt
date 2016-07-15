@@ -32,6 +32,10 @@ class AmplitudeEqualizer(private val size : Int, private val freq : Double)
         {
             val part = equalizedData.size..sourceData.lastIndex
             val energy = countEnergy(part)
+            if (equalizedData.size == 0)
+            {
+                maxEnergy = energy
+            }
             if (energy > maxEnergy)
             {
                 recorrectSignal(energy/maxEnergy)

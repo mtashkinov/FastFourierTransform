@@ -13,6 +13,7 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
     }
 
     private val ACCEPT_COEF = 0.4
+    private val TRIES = 5
 
     private var discretization = 0.0
     var pulse = 0
@@ -69,17 +70,19 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
 
     fun findPulse()
     {
+        var curTries = 0
         val firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE.toDouble() / 60, size, freq)
         val lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE.toDouble() / 60, size, freq)
         var index = FFT.getMaxIndex(fft, firstIndex, lastIndex)
         var fftClearedPike = fft.clone()
-        while ((fftClearedPike[index] != 0.0) && (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
+        while ((curTries <= TRIES) and (fftClearedPike[index] != 0.0) and (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
         {
             fftClearedPike = PikeDetector.clearPike(fftClearedPike, index)
             index = FFT.getMaxIndex(fftClearedPike, firstIndex, lastIndex)
+            ++curTries
         }
 
-        if (fftClearedPike[index] == 0.0)
+        if (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null)
         {
             isBadData = true
         }

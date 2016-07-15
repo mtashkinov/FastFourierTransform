@@ -81,6 +81,13 @@ class HeartRateData(file : File)
             this.data.add(data)
         }
 
+        if ((times.size > size) && (knowSize))
+        {
+            times.removeAt(0)
+            this.data.removeAt(0)
+            lastInterpIndex--
+        }
+
         if (firstMeasurement)
         {
             if (isReady())
@@ -93,7 +100,7 @@ class HeartRateData(file : File)
             if (isReady() && isFreqChanged())
             {
                 countPulse()
-            } else if (filter!!.isReady())
+            } else if ((filter!!.isReady()) && (!isFreqChanged()))
             {
                 updatePulse();
             }
@@ -104,7 +111,6 @@ class HeartRateData(file : File)
     {
         freq = countFreq()
         filter = Filter(size, freq)
-        val fftCounter = FFT(size)
 
         interpData = ArrayList<Double>(countInterpolatedData(0..data.lastIndex, freq).asList())
         for (value in interpData)
@@ -113,16 +119,8 @@ class HeartRateData(file : File)
         }
         val filteredData = filter!!.getData()
         filteredDataHistory.add(filteredData)
-        totalFFT = fftCounter.fft(filteredData)
-        totalFFTHistory.add(totalFFT)
         countPikes(filteredData)
-        val prevPulse = if (pulseHistory.size > 0) pulseHistory.last() else 0
-        val pulseDetector = PulseDetector(totalFFT, size, pikes, partSize, freq, prevPulse)
-        isBadData = pulseDetector.isBadData
-        pulse = pulseDetector.pulse
-        isBadDataHistory.add(isBadData)
-        pulseHistory.add(pulse)
-        dropOldData()
+        getPulse(filteredData)
         firstMeasurement = false
     }
 
@@ -135,10 +133,15 @@ class HeartRateData(file : File)
         val fft = fftCounter.fft(filteredData.slice(parts.last()).toDoubleArray())
         val pikeDetector = PikeDetector(fft, freq, partSize)
         pikes.add(pikeDetector.pikes)
+        getPulse(filteredData)
+    }
+
+    private fun getPulse(filteredData: DoubleArray)
+    {
         val totalFFTCounter = FFT(size)
         totalFFT = totalFFTCounter.fft(filteredData)
         totalFFTHistory.add(totalFFT)
-        val prevPulse = if (pulseHistory.size > 0) pulseHistory.last() else 0
+        val prevPulse = if ((pulseHistory.size > 0) && (!isBadData)) pulseHistory.last() else 0
         val pulseDetector = PulseDetector(totalFFT, size, pikes, partSize, freq, prevPulse)
         isBadData = pulseDetector.isBadData
         pulse = pulseDetector.pulse
@@ -249,7 +252,7 @@ class HeartRateData(file : File)
             return data[i]
         } else
         {
-            return data[i] + (data[i] - data[i-1]) * (time - times[i-1]) / (times[i] - times[i-1])
+            return data[i - 1] + (data[i] - data[i-1]) * (time - times[i-1]) / (times[i] - times[i-1])
         }
     }
 
