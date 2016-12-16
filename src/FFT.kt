@@ -1,3 +1,6 @@
+import PulseDetector.Companion.MAX_HEART_RATE
+import PulseDetector.Companion.MIN_HEART_RATE
+
 /**
  * Created by Mikhail on 26.02.2016.
  */
@@ -104,7 +107,18 @@ class FFT(private var size: Int)
         fun fromValueToIndex(value: Double, size: Int, freq: Double): Int
         {
             val index = value * size / freq
-            return index.toInt()
+            val res = index.toInt()
+            if (fromIndexToValue(res, size, freq) < MIN_HEART_RATE)
+            {
+                return res + 1
+            } else if (fromIndexToValue(res, size, freq) > MAX_HEART_RATE)
+            {
+                return res - 1
+            } else
+            {
+                return res
+            }
+            //return index.toInt()
         }
 
         fun fromIndexToValue(index: Int, size: Int, freq: Double): Double
