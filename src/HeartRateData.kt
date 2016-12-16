@@ -23,7 +23,6 @@ class HeartRateData(file : File)
         private set
     var knowSize = false
     private var lastInterpTime = 0.0
-    private var lastInterpIndex = 0
     private var interpStep = 0.0
     private var filter : Filter? = null
     var firstMeasurement = true
@@ -85,7 +84,6 @@ class HeartRateData(file : File)
         {
             times.removeAt(0)
             this.data.removeAt(0)
-            lastInterpIndex--
         }
 
         if (firstMeasurement)
@@ -154,7 +152,6 @@ class HeartRateData(file : File)
     {
         val dataToDrop = (partSize * PART_SHIFT).toInt()
 
-        lastInterpIndex -= dataToDrop
         filter!!.removeData(dataToDrop)
         for (i in 1..dataToDrop)
         {
@@ -168,12 +165,11 @@ class HeartRateData(file : File)
     {
         while (canInterpPoint())
         {
-            val point = interpolatePoint(lastInterpIndex, lastInterpTime + interpStep)
+            val point = interpolatePoint(data.lastIndex, lastInterpTime + interpStep)
             interpData.add(point)
             filter!!.addData(point)
             lastInterpTime += interpStep
         }
-        ++lastInterpIndex
     }
 
     private fun isFreqChanged() : Boolean
@@ -231,7 +227,6 @@ class HeartRateData(file : File)
     private fun convertLineInterp(range : IntRange, freq : Double) : DoubleArray
     {
         lastInterpTime = times.last().toDouble()
-        lastInterpIndex = times.lastIndex
         interpStep = 1000 / freq
         return DoubleArray(range.last - range.first + 1, { i -> interpolatePoint(range.start, times[range.start] + i * interpStep) })
     }
