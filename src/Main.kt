@@ -45,6 +45,9 @@ fun main(args : Array<String>)
         println(result.replace(';', ' '))
         resultFile.appendText(result + "\n")
 
+
+        val strongDataFile = File(filtDir, "st-" + file.name)
+        printStrongData(strongDataFile, input)
         /*val filteredDataFile = File(filtDir, "sp-" + file.name)
         printFFT(filteredDataFile, input)*/
         /*val filteredDataFile = File(filtDir, file.name)
@@ -127,6 +130,17 @@ fun printFFT(file : File, data: HeartRateData)
         file.appendText("${data.interpTimes[i]};${data.pureData[i]};${data.freqData[i]};${data.filteredData[i]}\n")
     }
 }*/
+
+fun printStrongData(file : File, data: HeartRateData)
+{
+    val interpTimes = DoubleArray(data.size, { x -> data.times.last() - (data.size - x) * data.interpStep })
+    file.printWriter().use { out ->
+        for (i in data.strongData.indices)
+        {
+            out.println("${interpTimes[i]},${data.interpDataHistory.last()[i]},${data.filteredDataHistory.last()[i]},${data.strongData[i]}")
+        }
+    }
+}
 
 fun printFilteredData(file : File, data : HeartRateData)
 {

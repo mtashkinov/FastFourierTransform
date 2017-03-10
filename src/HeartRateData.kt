@@ -9,7 +9,7 @@ class HeartRateData(file : File)
     val MEASUREMENT_DURATION = 15
     val TIME_TO_CALCULATE_SIZE = 5
     private val PART_SHIFT = 0.5
-    private var times : MutableList<Long> = ArrayList()
+    var times : MutableList<Long> = ArrayList()
     var data : MutableList<Double> = ArrayList()
         private set
     private var pikes : MutableList<MutableList<Int>> = ArrayList()
@@ -23,15 +23,17 @@ class HeartRateData(file : File)
         private set
     var knowSize = false
     private var lastInterpTime = 0.0
-    private var interpStep = 0.0
+    var interpStep = 0.0
     private var filter : Filter? = null
     var firstMeasurement = true
         private set
     val pulseHistory = ArrayList<Int>()
     val isBadDataHistory = ArrayList<Boolean>()
     val filteredDataHistory = ArrayList<DoubleArray>()
+    val interpDataHistory = ArrayList<DoubleArray>()
     val totalFFTHistory = ArrayList<DoubleArray>()
     var interpData = ArrayList<Double>()
+    var strongData = doubleArrayOf()
 
 
     init
@@ -116,6 +118,7 @@ class HeartRateData(file : File)
             filter!!.addData(value)
         }
         val filteredData = filter!!.getData()
+        interpDataHistory.add(interpData.toDoubleArray())
         filteredDataHistory.add(filteredData)
         countPikes(filteredData)
         getPulse(filteredData)
@@ -127,6 +130,7 @@ class HeartRateData(file : File)
         pikes.removeAt(0)
         val fftCounter = FFT(partSize)
         val filteredData = filter!!.getData()
+        interpDataHistory.add(interpData.toDoubleArray())
         filteredDataHistory.add(filteredData)
         val fft = fftCounter.fft(filteredData.slice(parts.last()).toDoubleArray())
         val pikeDetector = PikeDetector(fft, freq, partSize)
@@ -145,7 +149,18 @@ class HeartRateData(file : File)
         pulse = pulseDetector.pulse
         isBadDataHistory.add(isBadData)
         pulseHistory.add(pulse)
+        //applyStrongFilter()
         dropOldData()
+    }
+
+    private fun applyStrongFilter()
+    {
+        val strongFilter = Filter(size, freq, pulse - 20, pulse + 20)
+        for (value in interpData.subList(0, size - 1))
+        {
+            strongFilter.addData(value)
+        }
+        strongData = strongFilter.getData()
     }
 
     private fun dropOldData()

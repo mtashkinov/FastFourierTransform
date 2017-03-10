@@ -5,9 +5,15 @@ class Filter(size : Int, freq: Double)
 {
     private var firstDataSent = false
     private var firstData = 0.0
-    private val highPassFilter = FreqFilter(PulseDetector.MIN_HEART_RATE / 60, freq, FreqFilter.PassType.Highpass, 1.0)
-    private val lowPassFilter = FreqFilter(PulseDetector.MAX_HEART_RATE / 60, freq, FreqFilter.PassType.Lowpass, 1.0)
+    private var highPassFilter = FreqFilter(PulseDetector.MIN_HEART_RATE / 60, freq, FreqFilter.PassType.Highpass, 1.0)
+    private var lowPassFilter = FreqFilter(PulseDetector.MAX_HEART_RATE / 60, freq, FreqFilter.PassType.Lowpass, 1.0)
     private val amplitudeEqualizer = AmplitudeEqualizer(size, freq)
+
+    constructor(size: Int, freq: Double, minHeartRate: Int, maxHeartRate: Int) : this(size, freq)
+    {
+        highPassFilter = FreqFilter(minHeartRate.toDouble() / 60, freq, FreqFilter.PassType.Highpass, 1.0)
+        lowPassFilter = FreqFilter(maxHeartRate.toDouble() / 60, freq, FreqFilter.PassType.Lowpass, 1.0)
+    }
 
     fun addData(value : Double)
     {
