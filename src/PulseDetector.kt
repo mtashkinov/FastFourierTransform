@@ -8,7 +8,7 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
 {
     companion object
     {
-        val MIN_HEART_RATE = 40.0
+        val MIN_HEART_RATE = 45.0
         val MAX_HEART_RATE = 220.0
     }
 
@@ -77,7 +77,7 @@ class PulseDetector(private val fft : DoubleArray, val size : Int, val pikes : M
         var fftClearedPike = fft.clone()
         while ((curTries <= TRIES) and (fftClearedPike[index] != 0.0) and (filteredPikes.find { x -> isPikeCloseToIndex(index, x)} == null))
         {
-            fftClearedPike = PikeDetector.clearPike(fftClearedPike, index)
+            fftClearedPike = FFTPikeDetector.clearPike(fftClearedPike, index)
             index = FFT.getMaxIndex(fftClearedPike, firstIndex, lastIndex)
             ++curTries
         }

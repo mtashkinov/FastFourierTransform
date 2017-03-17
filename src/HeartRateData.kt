@@ -9,13 +9,15 @@ class HeartRateData(file : File)
     val MEASUREMENT_DURATION = 15
     val TIME_TO_CALCULATE_SIZE = 5
     private val PART_SHIFT = 0.5
+    private val STRONG_FILTER_WINDOW = 20
+
     var times : MutableList<Long> = ArrayList()
     var data : MutableList<Double> = ArrayList()
         private set
     private var pikes : MutableList<MutableList<Int>> = ArrayList()
     var partSize = 0
     var isBadData = true
-    var pulse = 0
+    var estimatedPulse = 0
     private var totalFFT : DoubleArray = DoubleArray(0)
     var freq = 0.0
     private val parts = ArrayList<IntRange>()
@@ -27,13 +29,17 @@ class HeartRateData(file : File)
     private var filter : Filter? = null
     var firstMeasurement = true
         private set
+    var pulse = 0
+
     val pulseHistory = ArrayList<Int>()
+    val estimatedPulseHistory = ArrayList<Int>()
     val isBadDataHistory = ArrayList<Boolean>()
     val filteredDataHistory = ArrayList<DoubleArray>()
     val interpDataHistory = ArrayList<DoubleArray>()
     val totalFFTHistory = ArrayList<DoubleArray>()
     var interpData = ArrayList<Double>()
     var strongData = doubleArrayOf()
+    val strongDataHistory = ArrayList<DoubleArray>()
 
 
     init
@@ -121,7 +127,7 @@ class HeartRateData(file : File)
         interpDataHistory.add(interpData.toDoubleArray())
         filteredDataHistory.add(filteredData)
         countPikes(filteredData)
-        getPulse(filteredData)
+        getPulse(filteredData, interpData.toDoubleArray())
         firstMeasurement = false
     }
 
@@ -133,34 +139,54 @@ class HeartRateData(file : File)
         interpDataHistory.add(interpData.toDoubleArray())
         filteredDataHistory.add(filteredData)
         val fft = fftCounter.fft(filteredData.slice(parts.last()).toDoubleArray())
-        val pikeDetector = PikeDetector(fft, freq, partSize)
+        val pikeDetector = FFTPikeDetector(fft, freq, partSize)
         pikes.add(pikeDetector.pikes)
-        getPulse(filteredData)
+        getPulse(filteredData, interpData.toDoubleArray())
     }
 
-    private fun getPulse(filteredData: DoubleArray)
+    private fun getPulse(filteredData: DoubleArray, interpolatedData: DoubleArray)
+    {
+        val estimatedPulse = getEstimatedPulse(filteredData)
+        getPrecisePulse(estimatedPulse, interpolatedData)
+        dropOldData()
+    }
+
+    private fun getEstimatedPulse(filteredData: DoubleArray) : Int
     {
         val totalFFTCounter = FFT(size)
         totalFFT = totalFFTCounter.fft(filteredData)
         totalFFTHistory.add(totalFFT)
-        val prevPulse = if ((pulseHistory.size > 0) && (!isBadData)) pulseHistory.last() else 0
+        val prevPulse = if ((estimatedPulseHistory.size > 0) && (!isBadData)) estimatedPulseHistory.last() else 0
         val pulseDetector = PulseDetector(totalFFT, size, pikes, partSize, freq, prevPulse)
         isBadData = pulseDetector.isBadData
-        pulse = pulseDetector.pulse
+        estimatedPulse = pulseDetector.pulse
         isBadDataHistory.add(isBadData)
-        pulseHistory.add(pulse)
-        //applyStrongFilter()
-        dropOldData()
+        estimatedPulseHistory.add(estimatedPulse)
+
+        return estimatedPulse
     }
 
-    private fun applyStrongFilter()
+    private fun getPrecisePulse(estimatedPulse: Int, interpolatedData: DoubleArray)
     {
-        val strongFilter = Filter(size, freq, pulse - 20, pulse + 20)
-        for (value in interpData.subList(0, size - 1))
+        val strongData = applyStrongFilter(estimatedPulse, interpolatedData)
+        pulse = PulsePikeDetector().getPulse(strongData, interpStep)
+        pulseHistory.add(pulse)
+    }
+
+    private fun applyStrongFilter(estimatedPulse: Int, interpolatedData: DoubleArray) : DoubleArray
+    {
+        val min = Math.round(Math.max(PulseDetector.MIN_HEART_RATE, estimatedPulse - STRONG_FILTER_WINDOW.toDouble())).toInt()
+        val max = Math.round(Math.min(PulseDetector.MAX_HEART_RATE, estimatedPulse + STRONG_FILTER_WINDOW.toDouble())).toInt()
+        val strongFilter = Filter(size, freq, min, max)
+        for (value in interpolatedData.slice(0..size-1))
         {
             strongFilter.addData(value)
         }
-        strongData = strongFilter.getData()
+        val result = strongFilter.getData()
+        strongData = result
+        strongDataHistory.add(result)
+
+        return result
     }
 
     private fun dropOldData()
@@ -170,8 +196,6 @@ class HeartRateData(file : File)
         filter!!.removeData(dataToDrop)
         for (i in 1..dataToDrop)
         {
-            times.removeAt(0)
-            data.removeAt(0)
             interpData.removeAt(0)
         }
     }
@@ -204,7 +228,7 @@ class HeartRateData(file : File)
         {
             val fftCounter = FFT(partSize)
             val fft = fftCounter.fft(filteredData.slice(part).toDoubleArray())
-            val pikeDetector = PikeDetector(fft, freq, partSize)
+            val pikeDetector = FFTPikeDetector(fft, freq, partSize)
             pikes.add(pikeDetector.pikes)
         }
     }

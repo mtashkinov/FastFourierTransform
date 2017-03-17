@@ -3,12 +3,11 @@ import java.util.*
 /**
  * Created by Mikhail on 29.05.2016.
  */
-class PikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
+class FFTPikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
 {
     private var firstIndex = 0
     private var lastIndex = 0
     var pikes = ArrayList<Int>();
-    private set
 
     init
     {

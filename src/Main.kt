@@ -31,15 +31,15 @@ fun main(args : Array<String>)
         val input = HeartRateData(file)
 
         var result = "${file.name};"
-        for (i in input.pulseHistory.indices)
+        for (i in input.estimatedPulseHistory.indices)
         {
             if (!input.isBadDataHistory[i])
             {
-                result += "${input.pulseHistory[i]};"
+                result += "${input.pulseHistory[i]}(${input.estimatedPulseHistory[i]}),"
             }
             else
             {
-                result += "-;"
+                result += "-,"
             }
         }
         println(result.replace(';', ' '))
@@ -49,7 +49,7 @@ fun main(args : Array<String>)
         val strongDataFile = File(filtDir, "st-" + file.name)
         printStrongData(strongDataFile, input)
         /*val filteredDataFile = File(filtDir, "sp-" + file.name)
-        printFFT(filteredDataFile, input)*/
+        printFilteredData(filteredDataFile, input)*/
         /*val filteredDataFile = File(filtDir, file.name)
         printData(filteredDataFile, input)*/
         /*val spFile = File(filtDir, "sp-" + file.name)
@@ -137,19 +137,21 @@ fun printStrongData(file : File, data: HeartRateData)
     file.printWriter().use { out ->
         for (i in data.strongData.indices)
         {
-            out.println("${interpTimes[i]},${data.interpDataHistory.last()[i]},${data.filteredDataHistory.last()[i]},${data.strongData[i]}")
+            out.println("${interpTimes[i]},${data.filteredDataHistory.last()[i]},${data.strongData[i]}")
         }
     }
 }
 
 fun printFilteredData(file : File, data : HeartRateData)
 {
-    for (i in 0..data.size-1)
-    {
-        for (j in data.filteredDataHistory.indices)
+    file.printWriter().use { out ->
+        for (i in 0..data.size - 1)
         {
-            file.appendText("${data.filteredDataHistory[j][i]};")
+            for (j in data.filteredDataHistory.indices)
+            {
+                out.print("${data.filteredDataHistory[j][i]},")
+            }
+            out.println()
         }
-        file.appendText("\n")
     }
 }
