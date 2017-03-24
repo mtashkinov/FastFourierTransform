@@ -1,5 +1,6 @@
 import java.io.File
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Created by Mikhail on 26.02.2016.
@@ -40,6 +41,7 @@ class HeartRateData(file : File)
     var interpData = ArrayList<Double>()
     var strongData = doubleArrayOf()
     val strongDataHistory = ArrayList<DoubleArray>()
+    val interpStepHistory = ArrayList<Double>()
 
 
     init
@@ -185,6 +187,7 @@ class HeartRateData(file : File)
         val result = strongFilter.getData()
         strongData = result
         strongDataHistory.add(result)
+        interpStepHistory.add(interpStep)
 
         return result
     }

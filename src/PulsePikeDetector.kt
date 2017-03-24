@@ -6,7 +6,7 @@ class PulsePikeDetector
     fun getPulse(data: DoubleArray, timeStep: Double) : Int
     {
         var i = 1
-        while ((i < data.size-1) and (data[i] * data[i+1] <= 0.0))
+        while ((i < data.size-1) and (data[i] * data[i+1] >= 0.0))
         {
             ++i
         }

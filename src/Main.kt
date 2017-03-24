@@ -132,11 +132,21 @@ fun printFFT(file : File, data: HeartRateData)
 
 fun printStrongData(file : File, data: HeartRateData)
 {
-    val interpTimes = DoubleArray(data.size, { x -> data.times.last() - (data.size - x) * data.interpStep })
     file.printWriter().use { out ->
-        for (i in data.strongData.indices)
+        for (x in data.interpStepHistory)
         {
-            out.println("${interpTimes[i]},${data.filteredDataHistory.last()[i]},${data.strongData[i]}")
+            out.print("$x,")
+        }
+        out.println()
+        out.println()
+
+        for (i in 0..data.size - 1)
+        {
+            for (j in data.strongDataHistory.indices)
+            {
+                out.print("${data.strongDataHistory[j][i]},")
+            }
+            out.println()
         }
     }
 }
