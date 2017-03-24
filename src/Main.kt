@@ -29,7 +29,7 @@ fun main(args : Array<String>)
     {
         val input = HeartRateData(file)
 
-        var result = "${file.name};"
+        var result = "${file.name},"
         for (i in input.estimatedPulseHistory.indices)
         {
             if (!input.isBadDataHistory[i])
@@ -41,7 +41,7 @@ fun main(args : Array<String>)
                 result += "-,"
             }
         }
-        println(result.replace(';', ' '))
+        println(result.replace(',', ' '))
         resultFile.appendText(result + "\n")
 
 
