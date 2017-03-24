@@ -7,12 +7,12 @@ class FFTPikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
 {
     private var firstIndex = 0
     private var lastIndex = 0
-    var pikes = ArrayList<Int>();
+    var pikes = ArrayList<Int>()
 
     init
     {
-        firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE.toDouble() / 60, size, freq)
-        lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE.toDouble() / 60, size, freq)
+        firstIndex = FFT.fromValueToIndex(PulseDetector.MIN_HEART_RATE / 60, size, freq)
+        lastIndex = FFT.fromValueToIndex(PulseDetector.MAX_HEART_RATE / 60, size, freq)
         findPikes()
     }
     private fun findPikes()
@@ -20,7 +20,7 @@ class FFTPikeDetector(val fft : DoubleArray, val freq : Double, val size : Int)
         var oldPike = FFT.getMaxIndex(fft, firstIndex, lastIndex)
         var clearedPike = fft
         var newPike = checkBorderPike(fft, oldPike)
-        while ((clearedPike[newPike] != 0.0) && (fft[newPike].toDouble() / fft[oldPike] >= 0.75))
+        while ((clearedPike[newPike] != 0.0) && (fft[newPike] / fft[oldPike] >= 0.75))
         {
             pikes.add(newPike)
             clearedPike = clearPike(clearedPike, newPike)

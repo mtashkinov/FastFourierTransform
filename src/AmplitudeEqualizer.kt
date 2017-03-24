@@ -85,11 +85,7 @@ class AmplitudeEqualizer(private val size : Int, private val freq : Double)
 
     private fun countEnergy(part : IntRange) : Double
     {
-        var energy = 0.0
-        for (i in part)
-        {
-            energy += sourceData[i] * sourceData[i]
-        }
+        val energy = part.sumByDouble { sourceData[it] * sourceData[it] }
 
         return energy / (part.last - part.first + 1)
     }
@@ -109,11 +105,7 @@ class AmplitudeEqualizer(private val size : Int, private val freq : Double)
 
     private fun recorrectSignalForOutput(correctCoef: Double) : ArrayList<Double>
     {
-        val result = ArrayList<Double>()
-        for (i in equalizedData.indices)
-        {
-            result.add(equalizedData[i] * correctCoef)
-        }
+        val result = equalizedData.indices.mapTo(ArrayList<Double>()) { equalizedData[it] * correctCoef }
 
         return result
     }
@@ -121,9 +113,6 @@ class AmplitudeEqualizer(private val size : Int, private val freq : Double)
     private fun addCorrectedSignalForOutput(data: MutableList<Double>, partEnergy : Double, part : IntRange)
     {
         val energyCoef = Math.sqrt(maxEnergy / partEnergy)
-        for (index in part)
-        {
-            data.add(sourceData[index] * energyCoef)
-        }
+        part.mapTo(data) { sourceData[it] * energyCoef }
     }
 }

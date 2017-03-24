@@ -60,7 +60,7 @@ class HeartRateData(file : File)
 
         for (i in lines.indices)
         {
-            val line = lines[i].replace(";", " ")
+            val line = lines[i].replace(",", " ").replace(";", " ")
             val lineScanner = Scanner(line)
 
             addData(lineScanner.nextLong(), lineScanner.next().toDouble())
@@ -78,8 +78,8 @@ class HeartRateData(file : File)
     {
         if ((!knowSize) and (time >= TIME_TO_CALCULATE_SIZE * 1000))
         {
-            calculateSize();
-            calculateParts();
+            calculateSize()
+            calculateParts()
         }
 
         times.add(time)
@@ -108,7 +108,7 @@ class HeartRateData(file : File)
                 countPulse()
             } else if ((filter!!.isReady()) && (!isFreqChanged()))
             {
-                updatePulse();
+                updatePulse()
             }
         }
     }
@@ -244,7 +244,7 @@ class HeartRateData(file : File)
 
     private fun calculateParts()
     {
-        var start = 0;
+        var start = 0
         while (start + partSize <= size)
         {
             val end = start + partSize - 1
