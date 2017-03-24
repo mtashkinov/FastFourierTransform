@@ -10,7 +10,7 @@ class HeartRateData(file : File)
     val MEASUREMENT_DURATION = 15
     val TIME_TO_CALCULATE_SIZE = 5
     private val PART_SHIFT = 0.5
-    private val STRONG_FILTER_WINDOW = 20
+    private val STRONG_FILTER_WINDOW = 15
 
     var times : MutableList<Long> = ArrayList()
     var data : MutableList<Double> = ArrayList()
